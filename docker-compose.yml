@@ -1,0 +1,103 @@
+version: '2'
+services:
+
+################# ELASTICSEARCH CLUSTER DEFINITION ################
+## ElasticSearch cluster reference https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-node.html
+## Master-eligible node: A node that has node.master set to true (default), which makes it eligible to be elected as the master node, which controls the cluster.
+#  elasticsearch_master:
+#    build: elasticsearch/
+#    command: elasticsearch -Des.network.host=0.0.0.0 -Des.insecure.allow.root=true -Des.cluster.name=mycluster -Des.node.master=true -Des.node.data=false 
+#    environment:
+#      - ES_HEAP_SIZE=512m
+#    volumes:
+#      - /etc/localtime:/etc/localtime:ro 
+#      - ./elasticsearch/log:/var/log/elasticsearch/
+#      - ./elasticsearch/data:/usr/share/elasticsearch/data
+#    ports:
+#      - "9200"
+#      - "9300"
+#
+##Data node: A node that has node.data set to true (default). Data nodes hold data and perform data related operations such as CRUD, search, and aggregations.
+#  elasticsearch_data:
+#    build: elasticsearch/
+#    command: elasticsearch -Des.network.host=0.0.0.0 -Des.insecure.allow.root=true -Des.cluster.name=mycluster -Des.node.master=false -Des.node.data=true -Des.discovery.zen.ping.unicast.hosts=elasticsearch_master 
+#    environment:
+#      - ES_HEAP_SIZE=1g 
+#    volumes:
+#      - /etc/localtime:/etc/localtime:ro 
+#      - ./elasticsearch/log:/var/log/elasticsearch/
+#      - ./elasticsearch/data:/usr/share/elasticsearch/data
+#    ports:
+#      - "9200"
+#      - "9300"
+#    links:
+#      - elasticsearch_master
+#
+##Client node: A client node has both node.master and node.data set to false. It can neither hold data nor become the master node. It behaves as a “smart router” and is used to forward cluster-level requests to the master node and data-related requests (such as search) to the appropriate data nodes.
+#  elasticsearch:
+#    build: elasticsearch/
+#    command: elasticsearch -Des.network.host=0.0.0.0 -Des.insecure.allow.root=true -Des.cluster.name=mycluster -Des.node.master=false -Des.node.data=false -Des.discovery.zen.ping.unicast.hosts=elasticsearch_master
+#    environment:
+#      - ES_HEAP_SIZE=512m
+#    volumes:
+#      - /etc/localtime:/etc/localtime:ro 
+#      - ./elasticsearch/log:/var/log/elasticsearch/
+#      - ./elasticsearch/data:/usr/share/elasticsearch/data
+#    ports:
+#      - "9200:9200"
+#      - "9300:9300"
+#    links:
+#      - elasticsearch_master
+
+############### ELASTICSEARCH STANDALONE DEFINITION ################
+#Standalone node: 
+  elasticsearch:
+    build: elasticsearch/
+    command: elasticsearch -Des.network.host=0.0.0.0 -Des.insecure.allow.root=true -Des.cluster.name=mycluster -Des.node.master=true -Des.node.data=true 
+    environment:
+      - ES_HEAP_SIZE=512m
+    volumes:
+      - /etc/localtime:/etc/localtime:ro 
+      - ./elasticsearch/log:/var/log/elasticsearch/
+      - ./elasticsearch/data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+
+  
+  logstash:
+    build: logstash/
+    command: logstash -f /etc/logstash/conf.d/logstash.conf
+    volumes:
+      - /etc/localtime:/etc/localtime:ro 
+      - ./logstash/config:/etc/logstash/conf.d
+      - ./logstash/log:/opt/logstash/log
+    ports:
+      - "5000:5000"
+    links:
+      - elasticsearch
+
+  logstash-2:
+    build: logstash/
+    command: logstash -f /etc/logstash/conf.d/logstash2.conf
+    volumes:
+      - /etc/localtime:/etc/localtime:ro 
+      - ./logstash/config:/etc/logstash/conf.d
+      - ./logstash/log:/opt/logstash/log
+    ports:
+      - "5001:5001"
+    links:
+      - elasticsearch
+  
+  kibana:
+    build: kibana/
+    volumes:
+      - /etc/localtime:/etc/localtime:ro 
+      - ./kibana/config/:/opt/kibana/config/
+    ports:
+      - "5601:5601"
+    links:
+      - elasticsearch
+
+# Pending stuff
+#  - Load default dashboards on kibana
